@@ -1,4 +1,6 @@
 import numpy as np
+import json
+import os
 
 
 def is_positive_semi_definite(R):
@@ -25,3 +27,29 @@ def low_rank_eigen(G, num_eig):
     Q = Q[:, eig_indices]  # eigenvectors
     S = S[eig_indices]  # eigenvalues.
     return Q, S
+
+
+def get_slicer_positions_txt(json_file_path):
+    """
+    Reads a Slicer Markups JSON file from a given path, extracts position data,
+    and returns it as a formatted string in scientific notation.
+
+    :param json_file_path: Path to the JSON file.
+    :return: A formatted string of positions or an error message if the file is missing.
+    """
+    if not os.path.exists(json_file_path):
+        return f"Error: File not found at {json_file_path}"
+
+    # Read and parse the JSON file
+    with open(json_file_path, "r", encoding="utf-8") as file:
+        json_data = json.load(file)
+
+    # Extract control points from the first markup entry
+    control_points = json_data.get("markups", [])[0].get("controlPoints", [])
+
+    # Format positions
+    formatted_positions = "\n".join(
+        " ".join(f"{coord:.18e}" for coord in entry["position"]) for entry in control_points
+    )
+
+    return formatted_positions
