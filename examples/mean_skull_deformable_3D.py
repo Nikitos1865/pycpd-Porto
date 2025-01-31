@@ -6,15 +6,16 @@ import numpy as np
 
 from pycpd.utility import get_slicer_positions_txt
 
-txt_file_source = get_slicer_positions_txt('data/mean/decaMeanModel.mrk.json')
-txt_file_target = get_slicer_positions_txt('data/aligned_LMs/B6AF1_J.ply_align.mrk.json')
+txt_file_source = get_slicer_positions_txt('data/mean/semilandmarks.json')
+txt_file_target = get_slicer_positions_txt('data/semilandmarks/B6AF1_J.ply_align.json')
 fish_source = np.fromstring(txt_file_source, sep=' ').reshape(-1, 3)
 fish_target = np.fromstring(txt_file_target, sep=' ').reshape(-1, 3)
 marker_size = 100
-N_pts_include = 61
+N_pts_include = 3872
 IDs = [1,10,20,30]
-IDs_Y = IDs + [fish_source.shape[0] + i for i in IDs]
-IDs_X = IDs + [N_pts_include + i for i in IDs]
+
+IDs_Y = [i for i in IDs if i < 3872]  # Avoid exceeding dataset size
+IDs_X = [i for i in IDs if i < 3872]
 
 def visualize(iteration, error, X, Y, ax):
     plt.cla()
@@ -40,36 +41,35 @@ def visualize(iteration, error, X, Y, ax):
 
 
 def main():
-    txt_file_source = get_slicer_positions_txt('data/mean/decaMeanModel.mrk.json')
-    fish_source = np.fromstring(txt_file_source, sep=' ').reshape(-1, 3)
+    fish_source = (np.fromstring(get_slicer_positions_txt('data/mean/semilandmarks.json'), sep=' ')
+                   .reshape(-1, 3))
+    fish_target = (np.fromstring(get_slicer_positions_txt('data/semilandmarks/B6AF1_J.ply_align.json'), sep=' ')
+                   .reshape(-1, 3))
 
-    txt_file_target = get_slicer_positions_txt('data/aligned_LMs/B6AF1_J.ply_align.mrk.json')
-    fish_target = np.fromstring(txt_file_target, sep=' ').reshape(-1, 3)
-    print(fish_target)
-
-    #simulate a pointcloud missing certain parts
-    fish_target = fish_target[:N_pts_include]
-
-    X1 = np.zeros((fish_target.shape[0], fish_target.shape[1] + 1))
-    X1[:, :-1] = fish_target
-    X2 = np.ones((fish_target.shape[0], fish_target.shape[1] + 1))
-    X2[:, :-1] = fish_target
-    X = np.vstack((X1, X2))
+    print(f"Shape of fish_target (X): {fish_target.shape}")  # Expected: (3872, 3)
+    print(f"Shape of fish_source (Y): {fish_source.shape}")
 
 
-    Y1 = np.zeros((fish_source.shape[0], fish_source.shape[1] + 1))
-    Y1[:, :-1] = fish_source
-    Y2 = np.ones((fish_source.shape[0], fish_source.shape[1] + 1))
-    Y2[:, :-1] = fish_source
-    Y = np.vstack((Y1, Y2))
+
+
 
     # print(Y1.shape)
     # print(X1.shape)
 
+    X = fish_target  # Target (fixed landmarks)
+    Y = fish_source
+
 
     # select fixed correspondences
-    src_id = np.int32(IDs_Y)
-    tgt_id = np.int32(IDs_X)
+    src_id = np.array(IDs_Y, dtype=np.int32)
+    tgt_id = np.array(IDs_X, dtype=np.int32)
+
+    print("Max src_id:", np.max(src_id))
+    print("Max tgt_id:", np.max(tgt_id))
+    print("Valid range: 0 -", X.shape[0] - 1)
+
+    if np.max(src_id) >= Y.shape[0] or np.max(tgt_id) >= X.shape[0]:
+        raise ValueError("Error: source_id or target_id index is out of range!")
 
     print("Shape of X:", X.shape)
     print("Shape of Y:", Y.shape)
@@ -82,6 +82,7 @@ def main():
 
     reg = ConstrainedDeformableRegistration(**{'X': X, 'Y': Y}, e_alpha = 1e-8, source_id = src_id, target_id = tgt_id)
     reg.register(callback)
+    print("Finished!")
     plt.show()
 
 
