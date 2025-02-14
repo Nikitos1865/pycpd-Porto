@@ -53,3 +53,16 @@ def get_slicer_positions_txt(json_file_path):
     )
 
     return formatted_positions
+
+def calculate_registration_metrics(source, target):
+    """Calculate alignment metrics between source and target point clouds."""
+    diff = source - target
+    return {
+        'rmse': np.sqrt(np.mean(np.sum(diff**2, axis=1))),
+        'mae': np.mean(np.abs(diff)),
+        'max_error': np.max(np.abs(diff)),
+        'rmse_per_axis': np.sqrt(np.mean(diff**2, axis=0))
+    }
+
+
+

@@ -41,9 +41,9 @@ def visualize(iteration, error, X, Y, ax):
 
 
 def main():
-    fish_source = (np.fromstring(get_slicer_positions_txt('data/mean/semilandmarks.json'), sep=' ')
+    skull_source = (np.fromstring(get_slicer_positions_txt('data/mean/semilandmarks.json'), sep=' ')
                    .reshape(-1, 3))
-    fish_target = (np.fromstring(get_slicer_positions_txt('data/semilandmarks/B6AF1_J.ply_align.json'), sep=' ')
+    skull_target = (np.fromstring(get_slicer_positions_txt('data/semilandmarks/B6AF1_J.ply_align.json'), sep=' ')
                    .reshape(-1, 3))
 
     print(f"Shape of fish_target (X): {fish_target.shape}")  # Expected: (3872, 3)
