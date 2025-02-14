@@ -4,8 +4,6 @@ import matplotlib.pyplot as plt
 import sys
 import os
 
-from pygame.transform import threshold
-
 # Add the parent directory of "scripts" to sys.path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
