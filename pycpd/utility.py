@@ -1,6 +1,7 @@
 import numpy as np
 import json
 import os
+from matplotlib import pyplot as plt
 
 
 def is_positive_semi_definite(R):
@@ -63,6 +64,70 @@ def calculate_registration_metrics(source, target):
         'max_error': np.max(np.abs(diff)),
         'rmse_per_axis': np.sqrt(np.mean(diff**2, axis=0))
     }
+
+
+def plot_metrics_comparison(results):
+    """Plots comparison of RMSE and execution time given registration results."""
+    # Extract registration method names, rmse values and execution times
+    method_names = list(results.keys())
+    rmse_values = [results[m]['metrics']['rmse'] for m in method_names]
+    times = [results[m]['time'] for m in method_names]
+
+    # Bar chart for RMSE
+    plt.figure(figsize=(10, 4))
+
+    plt.subplot(1, 2, 1)
+    plt.bar(method_names, rmse_values, color='skyblue')
+    plt.title("RMSE Comparison")
+    plt.ylabel("RMSE")
+    plt.xlabel("Method")
+
+    # Bar chart for Execution Time
+    plt.subplot(1, 2, 2)
+    plt.bar(method_names, times, color='salmon')
+    plt.title("Execution Time")
+    plt.ylabel("Time (seconds)")
+    plt.xlabel("Method")
+
+    plt.tight_layout()
+    plt.show()
+
+
+def plot_registration_comparison(X, Y, results):
+    """Show side-by-side plots comparing the point set registration for each method."""
+
+    dim = X.shape[1]
+    method_names = list(results.keys())
+
+    num_methods = len(method_names)
+    plt.figure(figsize=(6 * num_methods, 5))
+
+    for i, m in enumerate(method_names, 1):
+        TY = results[m]['transformed_points']
+
+        plt.subplot(1, num_methods, i)
+        if dim == 2:
+            # 2D scatter
+            plt.scatter(X[:, 0], X[:, 1], c='red', label='Target (X)', s=8)
+            plt.scatter(TY[:, 0], TY[:, 1], c='blue', label=f'{m} Registered (Y)', s=8)
+            plt.scatter(Y[:, 0], Y[:, 1], c='green', label='Original Y', s=8, alpha=0.3)
+            plt.title(f"{m} Registration")
+            plt.legend(loc='upper right')
+        elif dim == 3:
+            # 3D scatter example
+            ax = plt.gca(projection='3d')
+            ax.scatter(X[:, 0], X[:, 1], X[:, 2], c='red', label='Target (X)', s=8)
+            ax.scatter(TY[:, 0], TY[:, 1], TY[:, 2], c='blue', label=f'{m} Registered (Y)', s=8)
+            ax.scatter(Y[:, 0], Y[:, 1], Y[:, 2], c='green', label='Original Y', s=8, alpha=0.3)
+            ax.set_title(f"{m} Registration")
+            ax.legend()
+        else:
+            raise ValueError("dim must be 2 or 3.")
+
+    plt.tight_layout()
+    plt.show()
+
+
 
 
 
