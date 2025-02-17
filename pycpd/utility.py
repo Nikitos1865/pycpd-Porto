@@ -21,56 +21,42 @@ def gaussian_kernel(X, beta, Y=None):
 def pca_kernel(X, mean_shape, U, eigenvalues, beta=None, Y=None):
     """
     Compute a PCA-based kernel matrix for shape deformation.
-
-    Parameters
-    ----------
-    X: numpy array (n_points_x, n_dimensions)
-        The source point cloud
-    mean_shape: numpy array (n_features,)
-        The mean shape from SSM
-    U: numpy array (n_features, n_modes)
-        The reduced eigenvector matrix (shape modes)
-    eigenvalues: numpy array (n_modes,)
-        The eigenvalues corresponding to retained modes
-    beta: float, optional
-        Scale parameter (not used in PCA kernel but kept for compatibility)
-    Y: numpy array, optional (n_points_y, n_dimensions)
-        The target point cloud. If None, Y = X is used
     """
     if Y is None:
         Y = X
 
     n_points_x = X.shape[0]
     n_points_y = Y.shape[0]
-    D = X.shape[1]  # dimensionality (3 for 3D points)
 
-    # Reshape X and Y to match the shape of mean_shape and U
-    X_flat = X.reshape(1, -1)  # (1, n_points * D)
-    Y_flat = Y.reshape(1, -1)  # (1, n_points * D)
-
-    # Center the points
-    X_centered = X_flat - mean_shape
-    Y_centered = Y_flat - mean_shape
-
-    # Project onto shape space
-    X_proj = np.dot(X_centered, U)  # (1, n_modes)
-    Y_proj = np.dot(Y_centered, U)  # (1, n_modes)
-
-    # Initialize kernel matrix
+    # Initialize kernel matrix with correct dimensions
     K = np.zeros((n_points_x, n_points_y))
 
-    # Compute kernel values for each pair of points
+    # Scale factor for distances
+    scale = np.mean(np.sum((X - Y[0]) ** 2, axis=1))
+    if scale == 0:
+        scale = 1.0
+
+    # Compute pairwise distances
     for i in range(n_points_x):
         for j in range(n_points_y):
-            # Extract corresponding projections for each point
-            x_point_proj = X_proj[:, :]  # Use full projection
-            y_point_proj = Y_proj[:, :]  # Use full projection
+            # Compute normalized distance between points
+            dist = np.sum((X[i] - Y[j]) ** 2) / scale
 
-            # Compute weighted similarity in shape space
-            K[i, j] = np.sum((x_point_proj * y_point_proj) / np.sqrt(eigenvalues + 1e-8))
+            # Weight by PCA modes
+            mode_weights = 0
+            for k in range(len(eigenvalues)):
+                mode_contribution = (U[i * 3:(i + 1) * 3, k].dot(U[j * 3:(j + 1) * 3, k]))
+                mode_weights += mode_contribution / (eigenvalues[k] + 1e-8)
 
-    # Normalize kernel
-    K = K / (np.max(np.abs(K)) + 1e-8)
+            # Combine distance and mode weights
+            K[i, j] = np.exp(-dist / 2) * (1 + mode_weights)
+
+    # Print debug info about kernel
+    print(f"Kernel stats - Min: {np.min(K):.6f}, Max: {np.max(K):.6f}, Mean: {np.mean(K):.6f}")
+
+    # Normalize kernel to [0, 1] range
+    K = (K - np.min(K)) / (np.max(K) - np.min(K) + 1e-8)
+
     return K
 
 

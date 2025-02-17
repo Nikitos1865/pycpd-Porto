@@ -35,7 +35,7 @@ def main(save=False):
     Y = np.loadtxt('data/bunny_source.txt')
 
     # Create synthetic training shapes for SSM
-    num_training_shapes = 20  # Increased number of training shapes
+    num_training_shapes = 20
     training_shapes = []
     np.random.seed(42)
 
@@ -69,19 +69,21 @@ def main(save=False):
     callback = partial(visualize, ax=ax, fig=fig,
                        save_fig=save[0] if isinstance(save, list) else save)
 
-    # Initialize and run the PCA-based registration
+    # Initialize and run the PCA-based registration with better parameters
     reg = PCADeformableRegistration(
         X=X,
         Y=Y,
-        alpha=1.0,  # Reduced alpha for more flexibility
-        mean_shape=mean_shape,
-        U=U_reduced,
-        eigenvalues=eigenvalues
+        alpha=0.1,  # PCA parameter
+        mean_shape=mean_shape,  # PCA parameter
+        U=U_reduced,  # PCA parameter
+        eigenvalues=eigenvalues,  # PCA parameter
+        tolerance=0.001,  # Increased tolerance
+        w=0.1,  # EM parameter
+        max_iterations=150  # More iterations allowed
     )
 
     reg.register(callback)
     plt.show()
-
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="PCA-based registration example")
