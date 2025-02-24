@@ -1,6 +1,6 @@
 from pycpd import RigidRegistration, DeformableRegistration
 from pycpd import utility
-from pycpd.utility import plot_metrics_comparison, plot_registration_comparison
+from pycpd.utility import plot_metrics_comparison, plot_registration_comparison, get_slicer_positions_txt
 import numpy as np
 import time
 
