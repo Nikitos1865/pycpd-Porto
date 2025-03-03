@@ -18,7 +18,7 @@ def gaussian_kernel(X, beta, Y=None):
     diff = np.sum(diff, 2)
     return np.exp(-diff / (2 * beta**2))
 
-def pca_kernel(X, mean_shape, U, eigenvalues, beta=None, Y=None):
+def pca_gaussian_mix_kernel(X, mean_shape, U, eigenvalues, beta=None, Y=None):
     """
     Compute a PCA-based kernel matrix for shape deformation.
     """
@@ -65,6 +65,54 @@ def pca_kernel(X, mean_shape, U, eigenvalues, beta=None, Y=None):
     K = (K - np.min(K)) / (np.max(K) - np.min(K) + 1e-8)
 
     return K
+
+def pca_kernel(X, mean_shape, U, eigenvalues, beta=None, Y=None):
+    """
+    Compute a PCA-based kernel matrix for shape deformation.
+    """
+    if Y is None:
+        Y = X
+
+    n_points_x = X.shape[0]
+    n_points_y = Y.shape[0]
+    num_modes = len(eigenvalues)
+
+    # Initialize kernel matrix with correct dimensions
+    K = np.zeros((n_points_x, n_points_y))
+
+    # Scale factor for distances
+    scale = np.mean(np.sum((X - Y[0]) ** 2, axis=1))
+    if scale == 0:
+        scale = 1.0
+
+    # Compute pairwise distances
+    # 1) Distances
+    dist_matrix = np.sum((X[:, None, :] - Y[None, :, :]) ** 2, axis=2) / scale  # (n_points_x, n_points_y)
+
+    # 2) Reshape U for X and Y if needed (assuming same # of points for both)
+    #    If X != Y in #points, you'll need separate U for each or handle differently
+    U_resh = U.reshape(n_points_x, 3, num_modes)  # shape: (n_points_x, 3, num_modes)
+
+    # 3) Mode weights for all i, j with einsum
+    M = np.einsum('ikm,jkm->ijm', U_resh, U_resh)  # (n_points_x, n_points_x, num_modes)
+    # ^ Possibly you want separate "U for Y" if Y has different # points, but here's the simpler same-size case.
+
+    # 4) Divide by eigenvalues
+    M /= (eigenvalues + 1e-8)
+
+    # Sum across modes to get PCA similarity
+    K = np.sum(M, axis=2)  # (n_points_x, n_points_y)
+
+    # Normalize to [0,1] for consistency
+    K = (K - np.min(K)) / (np.max(K) - np.min(K) + 1e-8)
+    # Print debug info about kernel
+    print(f"Kernel stats - Min: {np.min(K):.6f}, Max: {np.max(K):.6f}, Mean: {np.mean(K):.6f}")
+
+    # Normalize kernel to [0, 1] range
+    K = (K - np.min(K)) / (np.max(K) - np.min(K) + 1e-8)
+
+    return K
+
 
 
 def low_rank_eigen(G, num_eig):
