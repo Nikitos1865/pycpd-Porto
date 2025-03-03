@@ -7,8 +7,6 @@ from pycpd.pca_registration import PCADeformableRegistration
 from pycpd.ssm import build_ssm
 import json
 from pycpd.utility import get_slicer_positions_txt
-
-
 import plotly.graph_objects as go
 
 def plot_3d_interactive(X, Y):
@@ -53,13 +51,13 @@ def main(save=False):
     # Source
     skull_source = np.array([
         cp["position"]
-        for cp in json.load(open("../data/mean/semilandmarks.json"))["markups"][0]["controlPoints"]
+        for cp in json.load(open("./data/mean/semilandmarks.json"))["markups"][0]["controlPoints"]
     ], dtype=float)
 
     # Target
     skull_target = np.array([
         cp["position"]
-        for cp in json.load(open("../data/semilandmarks/LG.ply_align.json"))["markups"][0]["controlPoints"]
+        for cp in json.load(open("./data/semilandmarks/LG.ply_align.json"))["markups"][0]["controlPoints"]
     ], dtype=float)
 
     X = skull_target  # Target (fixed landmarks)
@@ -68,10 +66,9 @@ def main(save=False):
     # Plot before registration
     plot_3d_interactive(skull_target, skull_source)
 
-    all_shapes = []
 
     # 1) Find all .json files in the directory
-    json_dir = "../data/semilandmarks/"
+    json_dir = "./data/semilandmarks/"
     files_in_dir = os.listdir(json_dir)
     json_files = [f for f in files_in_dir if f.lower().endswith(".json")]
 
