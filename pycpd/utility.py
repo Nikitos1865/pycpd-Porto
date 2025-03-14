@@ -18,7 +18,7 @@ def gaussian_kernel(X, beta, Y=None):
     diff = np.sum(diff, 2)
     return np.exp(-diff / (2 * beta**2))
 
-def pca_kernel(X, mean_shape, U, eigenvalues, beta=None, Y=None):
+def pca_kernel(X, mean_shape, U, eigenvalues, Y=None):
     """
     Compute a PCA-based kernel matrix for shape deformation.
     """
@@ -50,19 +50,16 @@ def pca_kernel(X, mean_shape, U, eigenvalues, beta=None, Y=None):
     # ^ Possibly you want separate "U for Y" if Y has different # points, but here's the simpler same-size case.
 
     # 4) Divide by eigenvalues
-    M /= (eigenvalues + 1e-8)
+    M /= (np.log(eigenvalues + 1e-8) + 1)
 
     # 5) Sum over the modes => shape (n_points_x, n_points_x)
     mode_weights = np.sum(M, axis=2)
 
-    # 6) Combine with Gaussian
-    K = np.exp(-dist_matrix / 2) * (1 + mode_weights)
+    # Sum across modes to get PCA similarity
+    K = np.sum(M, axis=2)  # (n_points_x, n_points_y)
 
-    # Print debug info about kernel
-    print(f"Kernel stats - Min: {np.min(K):.6f}, Max: {np.max(K):.6f}, Mean: {np.mean(K):.6f}")
-
-    # Normalize kernel to [0, 1] range
-    K = (K - np.min(K)) / (np.max(K) - np.min(K) + 1e-8)
+    # Normalize to [0,1] for consistency
+    K = K / np.max(K)  # Just scale by max, don't shift min to zero
 
     return K
 

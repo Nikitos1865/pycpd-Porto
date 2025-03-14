@@ -2,12 +2,10 @@ import json
 import os
 
 import numpy as np
-from scipy.interpolate import interp1d
 import matplotlib.pyplot as plt
 from examples.pca_skull_deformable_3D import plot_3d_interactive
 from pycpd.pca_registration import PCADeformableRegistration
 from pycpd.ssm import build_ssm
-from scipy.spatial import KDTree
 
 from pycpd.utility import get_slicer_positions_txt
 
