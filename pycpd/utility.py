@@ -18,51 +18,42 @@ def gaussian_kernel(X, beta, Y=None):
     diff = np.sum(diff, 2)
     return np.exp(-diff / (2 * beta**2))
 
-def pca_kernel(X, mean_shape, U, eigenvalues, Y=None):
+def pca_kernel(X, mean_shape, U, eigenvalues):
     """
     Compute a PCA-based kernel matrix for shape deformation.
     """
-    if Y is None:
-        Y = X
-
     n_points_x = X.shape[0]
-    n_points_y = Y.shape[0]
-    num_modes = len(eigenvalues)
 
-    # Initialize kernel matrix with correct dimensions
-    K = np.zeros((n_points_x, n_points_y))
+    # Ensure U is properly shaped
+    if len(U.shape) == 3:
+        U_resh = U  # Already correctly shaped
+    else:
+        num_modes = U.size // (n_points_x * 3)  # Compute dynamically
+        if num_modes * n_points_x * 3 != U.size:
+            raise ValueError(f"U cannot be reshaped correctly. U.shape: {U.shape}, Expected: ({n_points_x}, 3, ?)")
+        U_resh = U.reshape(n_points_x, 3, num_modes)
 
-    # Scale factor for distances
-    scale = np.mean(np.sum((X - Y[0]) ** 2, axis=1))
-    if scale == 0:
-        scale = 1.0
+    print(f"Reshaped U: {U_resh.shape}")
 
-    # Compute pairwise distances
-    # 1) Distances
-    dist_matrix = np.sum((X[:, None, :] - Y[None, :, :]) ** 2, axis=2) / scale  # (n_points_x, n_points_y)
+    # Mode weights computation
+    M = np.einsum('ikm,jkm->ijm', U_resh, U_resh)
 
-    # 2) Reshape U for X and Y if needed (assuming same # of points for both)
-    #    If X != Y in #points, you'll need separate U for each or handle differently
-    U_resh = U.reshape(n_points_x, 3, num_modes)  # shape: (n_points_x, 3, num_modes)
+    # Ensure eigenvalues are the correct length
+    if eigenvalues.shape[0] > M.shape[-1]:
+        eigenvalues = eigenvalues[:M.shape[-1]]  # Slice down if too many modes
 
-    # 3) Mode weights for all i, j with einsum
-    M = np.einsum('ikm,jkm->ijm', U_resh, U_resh)  # (n_points_x, n_points_x, num_modes)
-    # ^ Possibly you want separate "U for Y" if Y has different # points, but here's the simpler same-size case.
+    print(f"eigenvalues.shape: {eigenvalues.shape}, expected: ({M.shape[-1]},)")
 
-    # 4) Divide by eigenvalues
+    # Normalize using eigenvalues
     M /= (np.log(eigenvalues + 1e-8) + 1)
 
-    # 5) Sum over the modes => shape (n_points_x, n_points_x)
-    mode_weights = np.sum(M, axis=2)
+    # Compute final kernel matrix
+    K = np.sum(M, axis=2)
 
-    # Sum across modes to get PCA similarity
-    K = np.sum(M, axis=2)  # (n_points_x, n_points_y)
-
-    # Normalize to [0,1] for consistency
-    K = K / np.max(K)  # Just scale by max, don't shift min to zero
+    # Normalize to [0,1]
+    K = K / np.max(K)
 
     return K
-
 
 def low_rank_eigen(G, num_eig):
     """
