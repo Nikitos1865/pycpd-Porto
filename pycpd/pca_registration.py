@@ -47,7 +47,7 @@ class PCADeformableRegistration(EMRegistration):
 
         # Compute relative change in W
         self.w_diff = np.mean(np.abs(self.W - self.prev_W))
-        print(f"Iteration {self.iteration}: W change = {self.w_diff:.6f}")
+        # print(f"Iteration {self.iteration}: W change = {self.w_diff:.6f}")
 
     def transform_point_cloud(self, Y=None):
         """
@@ -63,7 +63,7 @@ class PCADeformableRegistration(EMRegistration):
 
             # Print debug info about transformation
             max_displacement = np.max(np.abs(self.TY - prev_TY))
-            print(f"Max displacement: {max_displacement:.6f}")
+            # print(f"Max displacement: {max_displacement:.6f}")
 
     def update_variance(self):
         """
@@ -91,8 +91,8 @@ class PCADeformableRegistration(EMRegistration):
         self.diff = max(self.sigma_diff / (self.sigma2 + 1e-8),
                         self.w_diff / (np.mean(np.abs(self.W)) + 1e-8))
 
-        print(
-            f"Sigma2: {self.sigma2:.6f}, Sigma diff: {self.sigma_diff:.6f}, W diff: {self.w_diff:.6f}, Combined diff: {self.diff:.6f}")
+        # print(
+        #     f"Sigma2: {self.sigma2:.6f}, Sigma diff: {self.sigma_diff:.6f}, W diff: {self.w_diff:.6f}, Combined diff: {self.diff:.6f}")
 
     def get_registration_parameters(self):
         return self.G, self.W
