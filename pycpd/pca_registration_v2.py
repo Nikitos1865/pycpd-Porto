@@ -77,7 +77,12 @@ class PCADeformableRegistration2(EMRegistration):
         # print("M: ", self.M)
         # print("N: ", self.N)
         # print("D: ", self.D)
-        self.TY = self.mean_shape.reshape(self.M, self.D) + (self.U @ self.b).reshape(self.M, self.D)
+
+        if Y is None:
+            self.TY = self.mean_shape.reshape(self.M, self.D) + (self.U @ self.b).reshape(self.M, self.D)
+        else:
+            Y_transformed = Y.reshape(self.M, self.D) + (self.U @ self.b).reshape(self.M, self.D)
+            return Y_transformed
 
     def update_variance(self): # update variance step of M registration
 
