@@ -23,6 +23,7 @@ class PCADeformableRegistration2(EMRegistration):
         self.U = U # principal components (N*D x K) i.e. columns represent the eigen vectors.
         self.eigenvalues = eigenvalues # (k length array)
         self.b = np.zeros((len(eigenvalues), 1)) # (k x 1) vector
+        self.prev_b = self.b
 
 
     def expectation(self): # same as parent - expectation step of EM algorithm
@@ -63,6 +64,12 @@ class PCADeformableRegistration2(EMRegistration):
 
         self.b = np.linalg.solve(np.dot(self.U.T, dP_expanded @ self.U), np.dot(self.U.T, B)) # (U_t dP U)b = Ut B
 
+        # Compute relative change in W
+        self.b_diff = np.mean(np.abs(self.b - self.prev_b))
+        print(f"Iteration {self.iteration}: b change = {self.b_diff:.6f}")
+
+        self.prev_b = self.b
+
     def transform_point_cloud(self, Y=None): # use b to get the new TY = Y + Ub
         # print("mean shape: ", self.mean_shape)
         # print("U shape: ", self.U.shape)
@@ -70,7 +77,12 @@ class PCADeformableRegistration2(EMRegistration):
         # print("M: ", self.M)
         # print("N: ", self.N)
         # print("D: ", self.D)
-        self.TY = self.mean_shape.reshape(self.M, self.D) + (self.U @ self.b).reshape(self.M, self.D)
+
+        if Y is None:
+            self.TY = self.mean_shape.reshape(self.M, self.D) + (self.U @ self.b).reshape(self.M, self.D)
+        else:
+            Y_transformed = Y.reshape(self.M, self.D) + (self.U @ self.b).reshape(self.M, self.D)
+            return Y_transformed
 
     def update_variance(self): # update variance step of M registration
 
@@ -84,6 +96,12 @@ class PCADeformableRegistration2(EMRegistration):
         self.sigma2 = max(self.sigma2, self.tolerance / 10)
 
         self.diff = np.abs(self.sigma2 - qprev)
+
+        # Update sigma difference
+        self.sigma_diff = np.abs(self.sigma2 - qprev)
+
+        print(
+            f"Sigma2: {self.sigma2:.6f}, Sigma diff: {self.sigma_diff:.6f}, b diff: {self.b_diff:.6f}, Combined diff: {self.diff:.6f}")
 
     def get_registration_parameters(self):
         return self.U, self.b
