@@ -61,7 +61,7 @@ def repeat_preserving_original(points, num_target_points):
 
 
 def downsample_point_cloud(points, target_count):
-    """Downsample a point cloud to a target number of points using systematic sampling."""
+    """Downsample a point cloud to a target number of points"""
     if points.shape[0] <= target_count:
         return points
 
@@ -72,6 +72,8 @@ def downsample_point_cloud(points, target_count):
     indices = np.arange(0, points.shape[0], step)[:target_count]
 
     return points[indices]
+
+# open3d downsample
 
 
 def main():

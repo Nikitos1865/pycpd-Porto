@@ -140,7 +140,7 @@ def process_specimen(specimen_file, skull_source, mean_shape, U_reduced, eigenva
                     B_label=f"{specimen_name} Target (53 pts)",
                     save_dir=specimen_dir)
 
-    # Step 1: Run PCA-based CPD
+    # Run PCA-based CPD
     print(f"Running PCA-based CPD for {specimen_name}...")
     pca_reg = PCADeformableRegistration(
         X=skull_target,  # Target (fixed)

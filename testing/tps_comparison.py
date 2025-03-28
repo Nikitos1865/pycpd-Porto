@@ -69,7 +69,7 @@ def main():
 
     skull_target = np.array([
         cp["position"]
-        for cp in json.load(open("../data/semilandmarks/LG.ply_align.json"))["markups"][0]["controlPoints"]
+        for cp in json.load(open("../data/semilandmarks/A_J.ply_align.json"))["markups"][0]["controlPoints"]
     ], dtype=float)
 
     deca_mean_source = np.array([
@@ -79,11 +79,11 @@ def main():
 
     aligned_test_target = np.array([
         cp['position']
-        for cp in json.load(open("../data/aligned_LMs/LG.ply_align.mrk.json"))["markups"][0]["controlPoints"]
+        for cp in json.load(open("../data/aligned_LMs/A_J.ply_align.mrk.json"))["markups"][0]["controlPoints"]
     ])
 
     print(f"Skull source (mean semilandmarks) shape: {skull_source.shape}")
-    print(f"Skull target (LG semilandmarks) shape: {skull_target.shape}")
+    print(f"Skull target (A_J semilandmarks) shape: {skull_target.shape}")
     print(f"DECA mean source (53 points) shape: {deca_mean_source.shape}")
     print(f"Aligned test target (53 points) shape: {aligned_test_target.shape}")
 
@@ -108,13 +108,13 @@ def main():
 
     # Plot original data
     plot_point_sets(deca_mean_source, aligned_test_target,
-                    title="Original Comparison: DECA Mean vs LG Target (53 points)",
+                    title="Original Comparison: DECA Mean vs A_J Target (53 points)",
                     A_label="DECA Mean (53 pts)",
-                    B_label="LG Target (53 pts)")
+                    B_label="A_J Target (53 pts)")
 
     # Calculate initial RMSE
     initial_rmse = compute_rmse(deca_mean_source, aligned_test_target)
-    print(f"Initial RMSE between DECA mean and LG target (53 points): {initial_rmse:.6f}")
+    print(f"Initial RMSE between DECA mean and A_J target (53 points): {initial_rmse:.6f}")
 
     # Step 1A: Run PCA-based transformation on the mean to target
     print("\n--- Running PCA-based CPD ---")
@@ -145,9 +145,9 @@ def main():
 
     # Plot transformed vs target for PCA method
     plot_point_sets(deca_mean_transformed_pca, aligned_test_target,
-                    title="PCA-CPD: Transformed DECA Mean vs LG Target",
+                    title="PCA-CPD: Transformed DECA Mean vs A_J Target",
                     A_label="Transformed DECA Mean (PCA)",
-                    B_label="LG Target")
+                    B_label="A_J Target")
 
     # Step 4: Run traditional CPD
     print("\n--- Running Traditional CPD ---")
@@ -176,9 +176,9 @@ def main():
 
     # Plot transformed vs target for traditional method
     plot_point_sets(deca_mean_transformed_traditional, aligned_test_target,
-                    title="Traditional CPD: Transformed DECA Mean vs LG Target",
+                    title="Traditional CPD: Transformed DECA Mean vs A_J Target",
                     A_label="Transformed DECA Mean (Traditional)",
-                    B_label="LG Target")
+                    B_label="A_J Target")
 
     # Step 5: Compare PCA vs Traditional methods
     plot_point_sets(deca_mean_transformed_pca, deca_mean_transformed_traditional,
@@ -210,7 +210,7 @@ def main():
 
     # Target points
     ax.scatter(aligned_test_target[:, 0], aligned_test_target[:, 1], aligned_test_target[:, 2],
-               c='g', marker='*', s=50, label="LG Target")
+               c='g', marker='*', s=50, label="A_J Target")
 
     # PCA transformed
     ax.scatter(deca_mean_transformed_pca[:, 0], deca_mean_transformed_pca[:, 1], deca_mean_transformed_pca[:, 2],
