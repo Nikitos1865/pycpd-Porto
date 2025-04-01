@@ -237,23 +237,10 @@ def process_specimen(specimen_file, skull_source, mean_shape, U_reduced, eigenva
     traditional_transformed, _ = traditional_reg.register()
     traditional_time = time.time() - start_time
 
-    print(f"Traditional CPD Time for {specimen_name}: {traditional_time:.2f} seconds")
+    vanilla_tps_transform = calculate_tps_transform(skull_source, traditional_transformed)
 
-    # Use transform_point_cloud for traditional CPD
-    print(f"Using transform_point_cloud for traditional CPD on {specimen_name}...")
-
-    # Repeat the 53 points to match source points
-    num_points_in_source = skull_source.shape[0]
-    print(f"Repeating 53 points to match {num_points_in_source} points...")
-    deca_mean_source_resampled = repeat_preserving_original(deca_mean_source, num_points_in_source)
-
-    # Apply transformation using transform_point_cloud
-    TY_resampled_vanilla = traditional_reg.transform_point_cloud(Y=deca_mean_source_resampled)
-
-    # Extract first 53 points
-    deca_mean_transformed_traditional = TY_resampled_vanilla[:53]
-
-    print(f"Original 53 points shape for {specimen_name}: {deca_mean_source.shape}")
+    # Step 3: Apply TPS transform to 53-point DECA mean
+    deca_mean_transformed_traditional = vanilla_tps_transform(deca_mean_source)
 
     # Calculate RMSE after traditional CPD
     traditional_rmse = compute_rmse(deca_mean_transformed_traditional, aligned_test_target)

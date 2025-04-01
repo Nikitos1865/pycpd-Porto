@@ -6,6 +6,7 @@ from pycpd.pca_registration import PCADeformableRegistration
 from pycpd.deformable_registration import DeformableRegistration
 from pycpd.ssm import build_ssm
 from scipy.interpolate import Rbf
+import open3d as o3d
 
 
 def compute_rmse(A, B):
@@ -60,18 +61,31 @@ def repeat_preserving_original(points, num_target_points):
     return repeated_points
 
 
-def downsample_point_cloud(points, target_count):
-    """Downsample a point cloud to a target number of points"""
-    if points.shape[0] <= target_count:
-        return points
+def downsample_point_cloud(points, target_voxel_size=0.05):
+    """
+    Downsample a point cloud using Open3D's voxel downsampling method
+    with a fixed voxel size.
 
-    # Calculate the step size for systematic sampling
-    step = points.shape[0] // target_count
+    Parameters:
+    points (numpy.ndarray): The input point cloud array with shape (N, 3)
+    target_voxel_size (float): The voxel size to use for downsampling
 
-    # Select points at regular intervals
-    indices = np.arange(0, points.shape[0], step)[:target_count]
+    Returns:
+    numpy.ndarray: The downsampled point cloud
+    """
+    # Convert numpy array to Open3D point cloud
+    pcd = o3d.geometry.PointCloud()
+    pcd.points = o3d.utility.Vector3dVector(points)
 
-    return points[indices]
+    # Perform voxel downsampling
+    downsampled_pcd = pcd.voxel_down_sample(voxel_size=target_voxel_size)
+
+    # Convert back to numpy array
+    downsampled_points = np.asarray(downsampled_pcd.points)
+
+    print(f"Original points: {len(pcd.points)}, Downsampled points: {len(downsampled_pcd.points)}")
+
+    return downsampled_points
 
 # open3d downsample
 
@@ -85,12 +99,12 @@ def main():
 
     skull_target_full = np.array([
         cp["position"]
-        for cp in json.load(open("../data/semilandmarks/LG.ply_align.json"))["markups"][0]["controlPoints"]
+        for cp in json.load(open("../data/semilandmarks/A_J.ply_align.json"))["markups"][0]["controlPoints"]
     ], dtype=float)
 
     # Resample the target to have fewer points (e.g., 50% of original)
-    target_point_count = skull_target_full.shape[0] // 2
-    skull_target = downsample_point_cloud(skull_target_full, target_point_count)
+
+    skull_target = downsample_point_cloud(skull_target_full, 0.4)
 
     deca_mean_source = np.array([
         cp['position']
@@ -99,12 +113,12 @@ def main():
 
     aligned_test_target = np.array([
         cp['position']
-        for cp in json.load(open("../data/aligned_LMs/LG.ply_align.mrk.json"))["markups"][0]["controlPoints"]
+        for cp in json.load(open("../data/aligned_LMs/A_J.ply_align.mrk.json"))["markups"][0]["controlPoints"]
     ])
 
     print(f"Skull source (mean semilandmarks) shape: {skull_source.shape}")
-    print(f"Skull target FULL (LG semilandmarks) shape: {skull_target_full.shape}")
-    print(f"Skull target RESAMPLED (LG semilandmarks) shape: {skull_target.shape}")
+    print(f"Skull target FULL (A_J semilandmarks) shape: {skull_target_full.shape}")
+    print(f"Skull target RESAMPLED (A_J semilandmarks) shape: {skull_target.shape}")
     print(f"DECA mean source (53 points) shape: {deca_mean_source.shape}")
     print(f"Aligned test target (53 points) shape: {aligned_test_target.shape}")
 
@@ -125,8 +139,6 @@ def main():
             data = json.load(f)
         cpoints = data.get("markups", [])[0].get("controlPoints", [])
         arr = np.array([cp["position"] for cp in cpoints], dtype=float)
-        # Resample each shape in the SSM to match the new target count
-        arr = downsample_point_cloud(arr, target_point_count)
         all_shapes.append(arr)
 
     shapes_np = np.stack(all_shapes, axis=0)
@@ -137,13 +149,13 @@ def main():
 
     # Plot original data
     plot_point_sets(deca_mean_source, aligned_test_target,
-                    title="Original Comparison: DECA Mean vs LG Target (53 points)",
+                    title="Original Comparison: DECA Mean vs A_J Target (53 points)",
                     A_label="DECA Mean (53 pts)",
-                    B_label="LG Target (53 pts)")
+                    B_label="A_J Target (53 pts)")
 
     # Calculate initial RMSE
     initial_rmse = compute_rmse(deca_mean_source, aligned_test_target)
-    print(f"Initial RMSE between DECA mean and LG target (53 points): {initial_rmse:.6f}")
+    print(f"Initial RMSE between DECA mean and A_J target (53 points): {initial_rmse:.6f}")
 
     # Step 1A: Run PCA-based transformation on the mean to target
     print("\n--- Running PCA-based CPD with Resampled Target ---")
@@ -174,9 +186,9 @@ def main():
 
     # Plot transformed vs target for PCA method
     plot_point_sets(deca_mean_transformed_pca, aligned_test_target,
-                    title="PCA-CPD: Transformed DECA Mean vs LG Target (Resampled)",
+                    title="PCA-CPD: Transformed DECA Mean vs A_J Target (Resampled)",
                     A_label="Transformed DECA Mean (PCA)",
-                    B_label="LG Target")
+                    B_label="A_J Target")
 
     # Step 4: Run traditional CPD
     print("\n--- Running Traditional CPD with Resampled Target ---")
@@ -188,19 +200,14 @@ def main():
     traditional_transformed, _ = reg_vanilla.register()
 
     # Downsample the source to match target size for transformation with traditional method
-    source_resampled = downsample_point_cloud(skull_source, target_point_count)
+    vanilla_tps_transform = calculate_tps_transform(skull_source, traditional_transformed)
 
-    # Resample the DECA mean for transformation
-    mean_test_source_resampled = repeat_preserving_original(deca_mean_source, target_point_count)
 
-    TY_resampled_vanilla = reg_vanilla.transform_point_cloud(Y=mean_test_source_resampled)
+    deca_mean_transformed_traditional = vanilla_tps_transform(deca_mean_source)
 
-    # Extract only the first 53 points from the transformed result
-    deca_mean_transformed_traditional = TY_resampled_vanilla[:53]
+
 
     print("Original 53 points shape:", deca_mean_source.shape)
-    print("Resampled points shape:", mean_test_source_resampled.shape)
-    print("Transformed points shape:", TY_resampled_vanilla.shape)
 
     # Calculate RMSE after traditional transformation
     traditional_rmse = compute_rmse(deca_mean_transformed_traditional, aligned_test_target)
@@ -208,9 +215,9 @@ def main():
 
     # Plot transformed vs target for traditional method
     plot_point_sets(deca_mean_transformed_traditional, aligned_test_target,
-                    title="Traditional CPD: Transformed DECA Mean vs LG Target (Resampled)",
+                    title="Traditional CPD: Transformed DECA Mean vs A_J Target (Resampled)",
                     A_label="Transformed DECA Mean (Traditional)",
-                    B_label="LG Target")
+                    B_label="A_J Target")
 
     # Step 5: Compare PCA vs Traditional methods
     plot_point_sets(deca_mean_transformed_pca, deca_mean_transformed_traditional,
@@ -243,7 +250,7 @@ def main():
 
     # Target points
     ax.scatter(aligned_test_target[:, 0], aligned_test_target[:, 1], aligned_test_target[:, 2],
-               c='g', marker='*', s=50, label="LG Target")
+               c='g', marker='*', s=50, label="A_J Target")
 
     # PCA transformed
     ax.scatter(deca_mean_transformed_pca[:, 0], deca_mean_transformed_pca[:, 1], deca_mean_transformed_pca[:, 2],

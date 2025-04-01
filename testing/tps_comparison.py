@@ -158,30 +158,27 @@ def main():
 
     traditional_transformed, _ = reg_vanilla.register()
 
-    mean_test_source_resampled = repeat_preserving_original(deca_mean_source, 3872)
+    vanilla_tps_transform = calculate_tps_transform(skull_source, traditional_transformed)
 
-    TY_resampled_vanilla = reg_vanilla.transform_point_cloud(Y=mean_test_source_resampled)
-
+    deca_mean_transformed_vanilla = vanilla_tps_transform(deca_mean_source)
 
     # Extract only the first 53 points from the transformed result
-    deca_mean_transformed_traditional = TY_resampled_vanilla[:53]
 
     print("Original 53 points shape:", deca_mean_source.shape)
-    print("Resampled first 53 points:", mean_test_source_resampled[:5])
-    print("Transformed first few points:", deca_mean_transformed_traditional[:5])
+
 
     # Calculate RMSE after traditional transformation
-    traditional_rmse = compute_rmse(deca_mean_transformed_traditional, aligned_test_target)
+    traditional_rmse = compute_rmse(deca_mean_transformed_vanilla, aligned_test_target)
     print(f"RMSE after traditional CPD transformation (direct transform): {traditional_rmse:.6f}")
 
     # Plot transformed vs target for traditional method
-    plot_point_sets(deca_mean_transformed_traditional, aligned_test_target,
+    plot_point_sets(deca_mean_transformed_vanilla, aligned_test_target,
                     title="Traditional CPD: Transformed DECA Mean vs A_J Target",
                     A_label="Transformed DECA Mean (Traditional)",
                     B_label="A_J Target")
 
     # Step 5: Compare PCA vs Traditional methods
-    plot_point_sets(deca_mean_transformed_pca, deca_mean_transformed_traditional,
+    plot_point_sets(deca_mean_transformed_pca, deca_mean_transformed_vanilla,
                     title="PCA vs Traditional CPD Comparison",
                     A_label="PCA-CPD Transformed",
                     B_label="Traditional CPD Transformed")
@@ -217,8 +214,8 @@ def main():
                c='r', marker='^', s=30, label=f"PCA-CPD (RMSE: {pca_rmse:.4f})")
 
     # Traditional transformed
-    ax.scatter(deca_mean_transformed_traditional[:, 0], deca_mean_transformed_traditional[:, 1],
-               deca_mean_transformed_traditional[:, 2],
+    ax.scatter(deca_mean_transformed_vanilla[:, 0], deca_mean_transformed_vanilla[:, 1],
+               deca_mean_transformed_vanilla[:, 2],
                c='b', marker='s', s=30, label=f"Traditional CPD (RMSE: {traditional_rmse:.4f})")
 
     ax.set_xlabel("X")
