@@ -55,6 +55,50 @@ def pca_kernel(X, mean_shape, U, eigenvalues):
 
     return K
 
+
+def pca_kernel_new(X, mean_shape, U, eigenvalues, beta=1.0, use_spatial=False):
+    n_points_x = X.shape[0]
+
+    # Reshape U
+    if len(U.shape) == 3:
+        U_resh = U
+    else:
+        num_modes = U.size // (n_points_x * 3)
+        U_resh = U.reshape(n_points_x, 3, num_modes)
+
+    # Mode weights with proper eigenvalue regularization
+    M = np.einsum('ikm,jkm->ijm', U_resh, U_resh)
+
+    # Use inverse  for regularization
+    # Only use significant modes
+    significant_modes = eigenvalues > eigenvalues[0] * 0.05  # 5% threshold
+    M[:, :, ~significant_modes] = 0
+
+    # eigenvalue weighting
+    weights = np.zeros_like(eigenvalues)
+    weights[significant_modes] = 1.0 / np.sqrt(eigenvalues[significant_modes])
+    M *= weights[np.newaxis, np.newaxis, :]
+
+    # Sum over modes
+    K_pca = np.sum(M, axis=2)
+
+    if use_spatial:
+        # Combine with spatial kernel for locality
+        distances = np.sum((X[:, np.newaxis, :] - X[np.newaxis, :, :]) ** 2, axis=2)
+        K_spatial = np.exp(-distances / (2 * beta ** 2))
+
+        # Combine PCA and spatial information
+        K = K_pca * K_spatial
+    else:
+        K = K_pca
+
+    # Add small diagonal term for numerical stability
+    K += np.eye(n_points_x) * 1e-6
+
+    return K
+
+
+
 def low_rank_eigen(G, num_eig):
     """
     Calculate num_eig eigenvectors and eigenvalues of gaussian matrix G.
