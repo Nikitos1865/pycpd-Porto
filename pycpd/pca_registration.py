@@ -3,7 +3,7 @@ import numbers
 import numpy as np
 
 from pycpd.emregistration import EMRegistration
-from pycpd.utility import pca_kernel
+from pycpd.utility import pca_kernel, pca_kernel_new
 
 
 class PCADeformableRegistration(EMRegistration):
@@ -25,7 +25,7 @@ class PCADeformableRegistration(EMRegistration):
         self.eigenvalues = eigenvalues
         self.W = np.zeros((self.M, self.D))
         self.prev_W = None
-        self.G = pca_kernel(self.Y, self.mean_shape, self.U, self.eigenvalues)
+        self.G = pca_kernel_new(self.Y, self.mean_shape, self.U, self.eigenvalues)
 
         # Track both types of changes
         self.sigma_diff = np.inf
@@ -54,7 +54,7 @@ class PCADeformableRegistration(EMRegistration):
         Update a point cloud using the new estimate of the PCA-based deformable transformation.
         """
         if Y is not None:
-            G = pca_kernel(X=Y, mean_shape=self.mean_shape, U=self.U,
+            G = pca_kernel_new(X=Y, mean_shape=self.mean_shape, U=self.U,
                            eigenvalues=self.eigenvalues, Y=self.Y)
             return Y + np.dot(G, self.W)
         else:
