@@ -32,6 +32,30 @@ def frobenius_covariance_distance(A, B):
     return frobenius_distance
 
 
+def hausdorff_distance(A_flat, B_flat):
+    """
+    Computes Hausdorff distance between two flattened point clouds using NumPy only.
+
+    Parameters:
+    - A_flat: 1D NumPy array of shape (n_points * point_dim,)
+    - B_flat: 1D NumPy array of shape (m_points * point_dim,)
+    - point_dim: dimensionality of each point (e.g., 3 for 3D)
+
+    Returns:
+    - Symmetric Hausdorff distance
+    """
+    A = A_flat.reshape(-1, 3)
+    B = B_flat.reshape(-1, 3)
+
+    def directed_hausdorff(U, V):
+        dists = np.linalg.norm(U[:, np.newaxis, :] - V[np.newaxis, :, :], axis=2)
+        return np.max(np.min(dists, axis=1))
+
+    forward = directed_hausdorff(A, B)
+    backward = directed_hausdorff(B, A)
+    return max(forward, backward)
+
+
 def repeat_preserving_original(points, num_target_points):
     """Keep original points intact and fill extra with nearest repeats."""
     num_original = points.shape[0]
@@ -159,14 +183,18 @@ def PCA_rmse():
 
     rmse_before = compute_rmse(mean_test_source, aligned_test_target)
     frob_before = frobenius_covariance_distance(mean_test_source, aligned_test_target)
+    hauf_before = hausdorff_distance(mean_test_source, aligned_test_target)
     print(f"RMSE before registration: {rmse_before:.6f}")
     print(f"Frobenius Norm before registration: {frob_before:.6f}")
+    print(f"Hausdorf Norm before registration: {hauf_before:.6f}")
     # Step 4: Compute RMSE between the transformed 53 points and the original 53-point aligned_test_target
     rmse_53 = compute_rmse(TY_53, aligned_test_target)
     frob53 = frobenius_covariance_distance(TY_53, aligned_test_target)
+    hauf53 = hausdorff_distance(TY_53, aligned_test_target)
     # rmse_53 should be less than rmse_before,
     print(f"RMSE between transformed 53 points and original 53 target points: {rmse_53:.6f}")
     print(f"Frobenius distance between transformed 53 points and original 53 target points: {frob53:.6f}")
+    print(f"Hausdorf distance between transformed 53 points and original 53 target points: {hauf53:.6f}")
     # Plot original and transformed 53 points
     plot_point_sets(mean_test_source, aligned_test_target, title="Original vs Target 53 Points")
     plot_point_sets(TY_53, aligned_test_target, title="Transformed 53 Points vs Target")
