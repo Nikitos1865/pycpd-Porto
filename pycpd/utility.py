@@ -2,6 +2,9 @@ import numpy as np
 import json
 import os
 from matplotlib import pyplot as plt
+from scipy.interpolate import Rbf
+import open3d as o3d
+
 
 
 def is_positive_semi_definite(R):
@@ -207,6 +210,63 @@ def plot_registration_comparison(X, Y, results):
 
     plt.tight_layout()
     plt.show()
+
+def compute_rmse(A,B):
+    return np.sqrt(np.mean(np.sum((A-B)**2,axis=1)))
+
+def calculate_tps_transform(source_points, target_points):
+    print(f"Creating TPS transform with {source_points.shape[0]} point pairs...")
+
+    try:
+        # Create separate RBF interpolators for each coordinate
+        rbf_x = Rbf(source_points[:, 0], source_points[:, 1], source_points[:, 2],
+                    target_points[:, 0], function='thin_plate', smooth=1e-6)
+        rbf_y = Rbf(source_points[:, 0], source_points[:, 1], source_points[:, 2],
+                    target_points[:, 1], function='thin_plate', smooth=1e-6)
+        rbf_z = Rbf(source_points[:, 0], source_points[:, 1], source_points[:, 2],
+                    target_points[:, 2], function='thin_plate', smooth=1e-6)
+
+        def transform_function(points):
+            try:
+                x_transformed = rbf_x(points[:, 0], points[:, 1], points[:, 2])
+                y_transformed = rbf_y(points[:, 0], points[:, 1], points[:, 2])
+                z_transformed = rbf_z(points[:, 0], points[:, 1], points[:, 2])
+                return np.vstack([x_transformed, y_transformed, z_transformed]).T
+            except Exception as e:
+                print(f"TPS transform evaluation failed: {e}")
+                return points.copy()
+
+        return transform_function
+
+    except Exception as e:
+        print(f"TPS transform creation failed: {e}")
+
+        def identity_transform(points):
+            return points.copy()
+
+        return identity_transform
+
+
+def downsample_point_cloud(points, target_voxel_size=0.505):
+    """Downsample a point cloud using Open3D's voxel downsampling method."""
+    try:
+        # Convert numpy array to Open3D point cloud
+        pcd = o3d.geometry.PointCloud()
+        pcd.points = o3d.utility.Vector3dVector(points)
+
+        # Perform voxel downsampling
+        downsampled_pcd = pcd.voxel_down_sample(voxel_size=target_voxel_size)
+
+        # Convert back to numpy array
+        downsampled_points = np.asarray(downsampled_pcd.points)
+
+        print(f"Downsampling: {len(pcd.points)} → {len(downsampled_pcd.points)} points")
+        return downsampled_points
+
+    except Exception as e:
+        print(f"Downsampling failed: {e}, using original points")
+        return points
+
 
 
 

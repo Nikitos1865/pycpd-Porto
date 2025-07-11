@@ -11,7 +11,6 @@ from scipy.interpolate import Rbf
 from scipy.spatial.transform import Rotation
 from scipy.linalg import svd as scipy_svd
 import pandas as pd
-from pathlib import Path
 import open3d as o3d
 
 
@@ -350,7 +349,6 @@ def process_specimen(specimen_file, skull_source, mean_shape, U_reduced, eigenva
     specimen_dir = os.path.join(results_dir, specimen_name)
     os.makedirs(specimen_dir, exist_ok=True)
 
-    # Load target landmarks (53 points - not downsampled)
     try:
         aligned_test_target = np.array([
             cp['position']
@@ -549,7 +547,13 @@ def process_specimen(specimen_file, skull_source, mean_shape, U_reduced, eigenva
     try:
         traditional_reg = DeformableRegistration(
             X=skull_target,  # Processed Target (fixed)
-            Y=skull_source,  # Source (moving)
+            Y=skull_source,
+            alpha=2,
+            beta=1, # gaussian kernel width
+            tolerance=0.001,
+            w=0.1,  # EM parameter
+            max_iterations=200
+            # Source (moving)
         )
 
         traditional_transformed, _ = traditional_reg.register()
@@ -771,11 +775,7 @@ def main():
     voxel_size = 0.505
 
     # Noise parameters - set to None to disable noise, or provide a dict to enable
-    noise_params = {
-        'rotation_std': 15.0,  # Standard deviation for rotation in degrees
-        'scale_std': 0.1,  # Standard deviation for scaling factor
-        'translation_std': 10.0  # Standard deviation for translation
-    }
+    noise_params = None
 
     # Uncomment the line below to disable noise
     # noise_params = None

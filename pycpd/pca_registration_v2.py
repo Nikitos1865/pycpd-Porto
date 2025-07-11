@@ -100,8 +100,8 @@ class PCADeformableRegistration2(EMRegistration):
         # Update sigma difference
         self.sigma_diff = np.abs(self.sigma2 - qprev)
 
-        print(
-            f"Sigma2: {self.sigma2:.6f}, Sigma diff: {self.sigma_diff:.6f}, b diff: {self.b_diff:.6f}, Combined diff: {self.diff:.6f}")
+        # print(
+        #     f"Sigma2: {self.sigma2:.6f}, Sigma diff: {self.sigma_diff:.6f}, b diff: {self.b_diff:.6f}, Combined diff: {self.diff:.6f}")
 
     def get_registration_parameters(self):
         return self.U, self.b
