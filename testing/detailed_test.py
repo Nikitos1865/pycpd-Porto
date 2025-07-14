@@ -12,7 +12,7 @@ import pandas as pd
 import open3d as o3d
 from mpl_toolkits.mplot3d import Axes3D
 
-from pycpd.utility import compute_rmse, downsample_point_cloud, calculate_tps_transform
+from pycpd.utility import compute_rmse, frobenius_covariance_distance, hausdorff_distance, downsample_point_cloud, calculate_tps_transform
 
 
 def detailed_visualization_step(points_dict, title, save_path, step_num):
@@ -101,16 +101,27 @@ def analyze_transformation_quality(source, transformed, target, name):
     if target is not None and len(target) == len(transformed):
         initial_errors = np.linalg.norm(source - target, axis=1)
         final_errors = np.linalg.norm(transformed - target, axis=1)
+        #
+        # initial_rmse = np.sqrt(np.mean(initial_errors ** 2))
+        # final_rmse = np.sqrt(np.mean(final_errors ** 2))
+        initial_rmse = compute_rmse(source, target)
+        final_rmse = compute_rmse(target, transformed)
+        initial_frobenius_dist = frobenius_covariance_distance(source, target)
+        final_frobenius_dist = frobenius_covariance_distance(target, transformed)
+        initial_hausdorff_dist = hausdorff_distance(source, target)
+        final_hausdorff_dist = hausdorff_distance(target, transformed)
 
-        initial_rmse = np.sqrt(np.mean(initial_errors ** 2))
-        final_rmse = np.sqrt(np.mean(final_errors ** 2))
         improvement = ((initial_rmse - final_rmse) / initial_rmse) * 100
-
         improved_points = np.sum(final_errors < initial_errors)
+
 
         print(f"Accuracy Statistics:")
         print(f"  Initial RMSE: {initial_rmse:.6f}")
         print(f"  Final RMSE:   {final_rmse:.6f}")
+        print(f"  Initial frobenius : {initial_frobenius_dist:.6f}")
+        print(f"  Final frobenius:   {final_frobenius_dist:.6f}")
+        print(f"  Initial hausdorff: {initial_hausdorff_dist:.6f}")
+        print(f"  Final hausdorff:   {final_hausdorff_dist:.6f}")
         print(f"  Improvement:  {improvement:.2f}%")
         print(
             f"  Improved points: {improved_points}/{len(final_errors)} ({improved_points / len(final_errors) * 100:.1f}%)")
@@ -121,6 +132,10 @@ def analyze_transformation_quality(source, transformed, target, name):
             'displacement_max': displacement_mags.max(),
             'initial_rmse': initial_rmse,
             'final_rmse': final_rmse,
+            'initial_frobenius_dist': initial_frobenius_dist,
+            'final_frobenius_dist': final_frobenius_dist,
+            'initial_hausdorff_dist': initial_hausdorff_dist,
+            'final_hausdorff_dist': final_hausdorff_dist,
             'improvement_pct': improvement,
             'improved_points': improved_points,
             'total_points': len(final_errors)
@@ -228,6 +243,12 @@ def analyze_negative_samples():
             # Calculate initial baseline
             initial_landmark_rmse = compute_rmse(deca_mean_source, target_landmarks)
             print(f"🎯 Initial DECA mean vs target landmarks RMSE: {initial_landmark_rmse:.6f}")
+
+            initial_landmark_frobenius_covariance = frobenius_covariance_distance(deca_mean_source, target_landmarks)
+            print(f"🎯 Initial DECA mean vs target landmarks frobenius distance: {initial_landmark_frobenius_covariance:.6f}")
+
+            initial_landmark_hausdorff_distance = hausdorff_distance(deca_mean_source, target_landmarks)
+            print(f"🎯 Initial DECA mean vs target landmarks frobenius distance: {initial_landmark_hausdorff_distance:.6f}")
 
             # Downsample target semilandmarks
             target_semilandmarks_downsampled = downsample_point_cloud(target_semilandmarks_full, 0.505)
@@ -464,6 +485,8 @@ def analyze_negative_samples():
             specimen_summary = {
                 'specimen_name': specimen_name,
                 'initial_landmark_rmse': float(initial_landmark_rmse),
+                'initial_landmark_frobenius_covariance': float(initial_landmark_frobenius_covariance),
+                'initial_landmark_hausdorff_distance': float(initial_landmark_hausdorff_distance),
                 'downsampling_ratio': downsampling_ratio,
                 'data_characteristics': {
                     'original_semilandmarks': len(target_semilandmarks_full),

@@ -214,6 +214,42 @@ def plot_registration_comparison(X, Y, results):
 def compute_rmse(A,B):
     return np.sqrt(np.mean(np.sum((A-B)**2,axis=1)))
 
+def frobenius_covariance_distance(A, B):
+    """
+    Computes the Frobenius norm between two point clouds.
+    """
+    # Compute covariance matrices (rows = samples, columns = dimensions)
+    cov1 = np.cov(A, rowvar=False)
+    cov2 = np.cov(B, rowvar=False)
+
+    # Frobenius norm of the difference
+    frobenius_distance = np.linalg.norm(cov1 - cov2, ord='fro') # ∥Σ1 - Σ2∥f
+
+    return frobenius_distance
+
+
+def hausdorff_distance(A_flat, B_flat):
+    """
+    Computes Hausdorff distance between two flattened point clouds using NumPy only.
+    Parameters:
+    - A_flat: 1D NumPy array of shape (n_points * point_dim,)
+    - B_flat: 1D NumPy array of shape (m_points * point_dim,)
+    - point_dim: dimensionality of each point (e.g., 3 for 3D)
+    Returns:
+    - Symmetric Hausdorff distance
+    """
+    A = A_flat.reshape(-1, 3)
+    B = B_flat.reshape(-1, 3)
+
+    def directed_hausdorff(U, V):
+        dists = np.linalg.norm(U[:, np.newaxis, :] - V[np.newaxis, :, :], axis=2)
+        return np.max(np.min(dists, axis=1))
+
+    forward = directed_hausdorff(A, B)
+    backward = directed_hausdorff(B, A)
+    return max(forward, backward)
+
+
 def calculate_tps_transform(source_points, target_points):
     print(f"Creating TPS transform with {source_points.shape[0]} point pairs...")
 
