@@ -18,6 +18,44 @@ def compute_rmse(A, B):
     return np.sqrt(np.mean((A - B) ** 2))
 
 
+def frobenius_covariance_distance(A, B):
+    """
+    Computes the Frobenius norm between two point clouds.
+    """
+    # Compute covariance matrices (rows = samples, columns = dimensions)
+    cov1 = np.cov(A, rowvar=False)
+    cov2 = np.cov(B, rowvar=False)
+
+    # Frobenius norm of the difference
+    frobenius_distance = np.linalg.norm(cov1 - cov2, ord='fro') # ∥Σ1 - Σ2∥f
+
+    return frobenius_distance
+
+
+def hausdorff_distance(A_flat, B_flat):
+    """
+    Computes Hausdorff distance between two flattened point clouds using NumPy only.
+
+    Parameters:
+    - A_flat: 1D NumPy array of shape (n_points * point_dim,)
+    - B_flat: 1D NumPy array of shape (m_points * point_dim,)
+    - point_dim: dimensionality of each point (e.g., 3 for 3D)
+
+    Returns:
+    - Symmetric Hausdorff distance
+    """
+    A = A_flat.reshape(-1, 3)
+    B = B_flat.reshape(-1, 3)
+
+    def directed_hausdorff(U, V):
+        dists = np.linalg.norm(U[:, np.newaxis, :] - V[np.newaxis, :, :], axis=2)
+        return np.max(np.min(dists, axis=1))
+
+    forward = directed_hausdorff(A, B)
+    backward = directed_hausdorff(B, A)
+    return max(forward, backward)
+
+
 def repeat_preserving_original(points, num_target_points):
     """Keep original points intact and fill extra with nearest repeats."""
     num_original = points.shape[0]
@@ -53,7 +91,7 @@ def PCA_rmse():
 
     skull_target = np.array([
         cp["position"]
-        for cp in json.load(open("../data/semilandmarks/LG.ply_align.json"))["markups"][0]["controlPoints"]
+        for cp in json.load(open("../data/semilandmarks/A_J.ply_align.json"))["markups"][0]["controlPoints"]
     ], dtype=float)
 
     mean_test_source = np.array([
@@ -63,7 +101,7 @@ def PCA_rmse():
 
     aligned_test_target = np.array([
         cp['position']
-        for cp in json.load(open("../data/aligned_LMs/LG.ply_align.mrk.json"))["markups"][0]["controlPoints"]
+        for cp in json.load(open("../data/aligned_LMs/A_J.ply_align.mrk.json"))["markups"][0]["controlPoints"]
     ])
 
     print(mean_test_source.shape)
@@ -144,12 +182,19 @@ def PCA_rmse():
     print("original 53 points",mean_test_source)
 
     rmse_before = compute_rmse(mean_test_source, aligned_test_target)
+    frob_before = frobenius_covariance_distance(mean_test_source, aligned_test_target)
+    hauf_before = hausdorff_distance(mean_test_source, aligned_test_target)
     print(f"RMSE before registration: {rmse_before:.6f}")
+    print(f"Frobenius Norm before registration: {frob_before:.6f}")
+    print(f"Hausdorf Norm before registration: {hauf_before:.6f}")
     # Step 4: Compute RMSE between the transformed 53 points and the original 53-point aligned_test_target
     rmse_53 = compute_rmse(TY_53, aligned_test_target)
+    frob53 = frobenius_covariance_distance(TY_53, aligned_test_target)
+    hauf53 = hausdorff_distance(TY_53, aligned_test_target)
     # rmse_53 should be less than rmse_before,
     print(f"RMSE between transformed 53 points and original 53 target points: {rmse_53:.6f}")
-
+    print(f"Frobenius distance between transformed 53 points and original 53 target points: {frob53:.6f}")
+    print(f"Hausdorf distance between transformed 53 points and original 53 target points: {hauf53:.6f}")
     # Plot original and transformed 53 points
     plot_point_sets(mean_test_source, aligned_test_target, title="Original vs Target 53 Points")
     plot_point_sets(TY_53, aligned_test_target, title="Transformed 53 Points vs Target")
